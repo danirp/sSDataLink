@@ -1,15 +1,11 @@
 /** @file ssDataLink.c
  *
- * @brief RX - TX, code - decode, and definitions.
+ * @brief Super Simple Data Link.
  *
  */
 
 #include "ssDataLink.h"
-
-#include <string.h>
-#include <stdio.h>
-
-#include "hw.h"	/* HW_CrcXmodem */
+#include "hw.h"	/* Provides HW_CrcXmodem */
 
 
 /* *************************************************************************
@@ -36,9 +32,24 @@
  * *                   Private Functions Declaration                       *
  * ************************************************************************* */
 
+/**
+ * @brief Fills outPosition with the slip representation of inByte.
+ *
+ * inByte represented in slip could be one or two bytes. The function
+ * returns the number of bytes that have been written to outPosition.
+ *
+ * https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
+ *
+ * @param [in] 	inByte Value to be coded in slip.
+ * @param [out] outPosition Addr. where coded bytes are going to be written.
+ * @return Number of bytes written at outPossition.
+ */
+uint8_t ssdl_nextSlip( uint8_t inByte, uint8_t* outPosition);
+
 /* *************************************************************************
  * *                    Private Functions Definition                       *
  * ************************************************************************* */
+
 uint8_t ssdl_nextSlip( uint8_t inByte, uint8_t* outPosition)
 {
     uint8_t tNbytes = 0;
@@ -67,28 +78,41 @@ uint8_t ssdl_nextSlip( uint8_t inByte, uint8_t* outPosition)
 
 }
 
-
-
 /* *************************************************************************
  * *                      Public Functions Definition                      *
  * ************************************************************************* */
 
-void SSDL_InitDecoder( SSDL_decoderHandle_t* handle, uint8_t* buff )
+void SSDL_InitDecoder( SSDL_decoderHandle_t* handle, uint8_t* buff, uint16_t timeoutTicks )
 {
     handle->isReceiving = false;
     handle->lastByteWasEscaped = false;
     handle->receivedBytes = 0;
     handle->timeoutCnt = 0;
+    handle->timeoutTop = timeoutTicks;
     handle->buff = buff;
     handle->len = 0;
 }
 
-void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen )
+bool SSDL_TimeoutTick( SSDL_decoderHandle_t* handle )
+{
+	bool retVal = false;
+	handle->timeoutCnt ++;
+
+	if( handle->timeoutCnt >= handle->timeoutTop )
+	{
+		SSDL_InitDecoder(handle, handle->buff, handle->timeoutTop);
+		retVal = true;
+	}
+
+	return retVal;
+}
+
+void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen, ssdl_parseFunction_t parser )
 {
     uint16_t tIndex = 0;
     uint8_t lastByte = 0;
 
-    handle->status = SSDL_DECODER_DECODING;
+    handle->currentStatus = SSDL_DECODER_DECODING;
 
     for(tIndex = 0; tIndex < inLen; tIndex++)
     {
@@ -102,23 +126,28 @@ void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen 
         	handle->lastByteWasEscaped = false;
 
             /* CRC */
-            //uint16_t crc = ~crc16_be( 0xFFFF, handle->buff, handle->len);
-        	uint16_t crc = HW_CrcXmodem( handle->buff, handle->len );
+            uint16_t crc = HW_CrcXmodem( handle->buff, handle->len );
 
             if ( 0 == crc )
             {
-            	handle->status = SSDL_DECODER_SUCCESS;
+            	handle->currentStatus = SSDL_DECODER_SUCCESS;
+            	handle->lastStatus = SSDL_DECODER_SUCCESS;
+            	if( NULL != parser )
+            	{
+            		(void)parser( handle->buff, handle->len );
+            	}
             }
             else
             {
-            	handle->status = SSDL_DECODER_FERROR;
+            	handle->currentStatus = SSDL_DECODER_FERROR;
+            	handle->lastStatus = SSDL_DECODER_FERROR;
             }
         }
         else
         {
             if ( SSDL_SLIP_ESC == lastByte )
             {
-                /* If scape byte, do not feed anything and save the state */
+                /* If escape byte, do not feed anything and save the state */
             	handle->lastByteWasEscaped = true;
             }
             else
@@ -148,7 +177,7 @@ void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen 
                     *(handle->buff + handle->receivedBytes) = lastByte;
                 }
 
-                /* Increase index as, new byte arrived */
+                /* Increase index as new byte arrived */
                 handle->receivedBytes++;
             }
         }
@@ -156,7 +185,7 @@ void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen 
 }
 
 
-bool SSDL_EncodeAndSend( uint16_t cmd, uint8_t* data, uint16_t dataLen, ssdl_txFunction_t txFunction  )
+bool SSDL_EncodeAndSend( uint8_t* data, uint16_t dataLen, ssdl_sendFunction_t sender  )
 {
     uint32_t tIndex = 0;
     uint16_t crc = 0;
@@ -164,26 +193,15 @@ bool SSDL_EncodeAndSend( uint16_t cmd, uint8_t* data, uint16_t dataLen, ssdl_txF
     uint8_t tmpBuf[2];
     uint8_t tmpSize = 0;
 
-    uint8_t tmpCmd[2];
-
-    memcpy( tmpCmd, &cmd, sizeof(uint16_t) );
-
-
     if( ( ( NULL != data ) ||
         ( ( NULL == data ) && ( 0 == dataLen) ) ) &&
-        ( NULL != txFunction ) )
+        ( NULL != sender ) )
     {
-        /* Command */
-        tmpSize = ssdl_nextSlip( tmpCmd[0] , tmpBuf );
-        txFunction( tmpBuf, tmpSize);
-        tmpSize = ssdl_nextSlip( tmpCmd[1] , tmpBuf );
-        txFunction( tmpBuf, tmpSize);
-
         /* Data */
         for(tIndex = 0; tIndex < dataLen; tIndex++)
         {
             tmpSize = ssdl_nextSlip( *(data + tIndex), tmpBuf );
-            txFunction( tmpBuf, tmpSize);
+            sender( tmpBuf, tmpSize);
         }
 
         /* CRC */
@@ -191,13 +209,13 @@ bool SSDL_EncodeAndSend( uint16_t cmd, uint8_t* data, uint16_t dataLen, ssdl_txF
         crc = HW_CrcXmodem( data, dataLen );
 
         tmpSize = ssdl_nextSlip( (uint8_t)( crc >> 8 ) , tmpBuf );
-        txFunction( tmpBuf, tmpSize);
+        sender( tmpBuf, tmpSize);
         tmpSize = ssdl_nextSlip( (uint8_t)crc, tmpBuf );
-        txFunction( tmpBuf, tmpSize);
+        sender( tmpBuf, tmpSize);
 
         /* Terminator */
         tmpBuf[0] = SSDL_SLIP_END;
-        txFunction( tmpBuf, 1U);
+        sender( tmpBuf, 1U);
     }
 
     return true;
