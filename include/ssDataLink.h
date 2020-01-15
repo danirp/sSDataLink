@@ -30,9 +30,9 @@
  */
 typedef enum
 {
-	SSDL_DECODER_SUCCESS,	/* Successfully decoded a message */
-	SSDL_DECODER_DECODING,  /* Nothing decoded yet, keep iterating  */
-	SSDL_DECODER_FERROR		/* ERROR! Suffered a framing error (wrong crc) */
+    SSDL_DECODER_SUCCESS,    /* Successfully decoded a message */
+    SSDL_DECODER_DECODING,  /* Nothing decoded yet, keep iterating  */
+    SSDL_DECODER_FERROR        /* ERROR! Suffered a framing error (wrong crc) */
 
 }SSDL_decoderStatus_t;
 
@@ -43,15 +43,15 @@ typedef enum
  */
 typedef struct
 {
-    uint16_t receivedBytes;				/* Number of bytes decoded so far */
-    uint8_t timeoutCnt;					/* Current number of timeout ticks */
-    uint8_t timeoutTop;					/* Number timeout ticks to trigger a timeout */
-    uint8_t * buff;						/* Output decoded message buffer */
-    uint16_t len;						/* output decoded message length  */
-    bool isReceiving;					/* Flow control */
-    bool lastByteWasEscaped;			/* Flow control */
-    SSDL_decoderStatus_t currentStatus;		/* Status of the last execution, to be used by calling processes */
-    SSDL_decoderStatus_t lastStatus;		/* Status of the last finished message, to be used by calling processes */
+    uint16_t receivedBytes;                /* Number of bytes decoded so far */
+    uint8_t timeoutCnt;                    /* Current number of timeout ticks */
+    uint8_t timeoutTop;                    /* Number timeout ticks to trigger a timeout */
+    uint8_t * buff;                        /* Output decoded message buffer */
+    uint16_t len;                        /* output decoded message length  */
+    bool isReceiving;                    /* Flow control */
+    bool lastByteWasEscaped;            /* Flow control */
+    SSDL_decoderStatus_t currentStatus;        /* Status of the last execution, to be used by calling processes */
+    SSDL_decoderStatus_t lastStatus;        /* Status of the last finished message, to be used by calling processes */
 
 }SSDL_decoderHandle_t;
 
@@ -108,8 +108,8 @@ bool SSDL_TimeoutTick( SSDL_decoderHandle_t* handle );
  * Analyzing handle->currentStatus the calling process can determine what
  * happened after processing the last byte of the chunk.
  *
- * SSDL_DECODER_DECODING:  	Nothing decoded yet, keep iterating
- * SSDL_DECODER_SUCCESS:	Successfully decoded a message
+ * SSDL_DECODER_DECODING:	Nothing decoded yet, keep iterating
+ * SSDL_DECODER_SUCCESS:    Successfully decoded a message
  * SSDL_DECODER_FERROR:		ERROR! Suffered a framing error (wrong crc)
  *
  * Analyzing handle->lastStatus the calling process can determine what

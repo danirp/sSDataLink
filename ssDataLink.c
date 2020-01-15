@@ -5,7 +5,7 @@
  */
 
 #include "ssDataLink.h"
-#include "hw.h"	/* Provides HW_CrcXmodem */
+#include "hw.h"    /* Provides HW_CrcXmodem */
 
 /* *************************************************************************
  * *                          Private Constants                            *
@@ -27,7 +27,7 @@
  *
  * https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
  *
- * @param [in] 	inByte Value to be coded in slip.
+ * @param [in]     inByte Value to be coded in slip.
  * @param [out] outPosition Addr. where coded bytes are going to be written.
  * @return Number of bytes written at outPossition.
  */
@@ -72,33 +72,33 @@ static uint8_t ssdl_nextSlip( uint8_t inByte, uint8_t* outPosition)
 
 void SSDL_InitDecoder( SSDL_decoderHandle_t* handle, uint8_t* buff, uint16_t timeoutTicks )
 {
-	if( ( NULL != handle ) && ( NULL != buff ) )
-	{
-		handle->isReceiving = false;
-		handle->lastByteWasEscaped = false;
-		handle->receivedBytes = 0;
-		handle->timeoutCnt = 0;
-		handle->timeoutTop = timeoutTicks;
-		handle->buff = buff;
-		handle->len = 0;
-	}
+    if( ( NULL != handle ) && ( NULL != buff ) )
+    {
+        handle->isReceiving = false;
+        handle->lastByteWasEscaped = false;
+        handle->receivedBytes = 0;
+        handle->timeoutCnt = 0;
+        handle->timeoutTop = timeoutTicks;
+        handle->buff = buff;
+        handle->len = 0;
+    }
 }
 
 bool SSDL_TimeoutTick( SSDL_decoderHandle_t* handle )
 {
-	bool retVal = false;
+    bool retVal = false;
 
-	if( NULL != handle )
-	{
-		handle->timeoutCnt ++;
-		if( handle->timeoutCnt >= handle->timeoutTop )
-		{
-			/* Restart decoder if timeout reached */
-			SSDL_InitDecoder(handle, handle->buff, handle->timeoutTop);
-			retVal = true;
-		}
-	}
-	return retVal;
+    if( NULL != handle )
+    {
+        handle->timeoutCnt ++;
+        if( handle->timeoutCnt >= handle->timeoutTop )
+        {
+            /* Restart decoder if timeout reached */
+            SSDL_InitDecoder(handle, handle->buff, handle->timeoutTop);
+            retVal = true;
+        }
+    }
+    return retVal;
 }
 
 void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen, ssdl_parseFunction_t parser )
@@ -108,75 +108,75 @@ void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen,
 
     if( ( NULL != handle ) && ( NULL != inBuff ) )
     {
-		handle->currentStatus = SSDL_DECODER_DECODING;
+        handle->currentStatus = SSDL_DECODER_DECODING;
 
-		for(tIndex = 0; tIndex < inLen; tIndex++)
-		{
-			lastByte = *( inBuff + tIndex);
+        for(tIndex = 0; tIndex < inLen; tIndex++)
+        {
+            lastByte = *( inBuff + tIndex);
 
-			if( SSDL_SLIP_END == lastByte )
-			{
-				handle->isReceiving = false;
-				handle->len = handle->receivedBytes;
-				handle->receivedBytes = 0;
-				handle->lastByteWasEscaped = false;
+            if( SSDL_SLIP_END == lastByte )
+            {
+                handle->isReceiving = false;
+                handle->len = handle->receivedBytes;
+                handle->receivedBytes = 0;
+                handle->lastByteWasEscaped = false;
 
-				/* CRC */
-				uint16_t crc = HW_CrcXmodem( handle->buff, handle->len );
+                /* CRC */
+                uint16_t crc = HW_CrcXmodem( handle->buff, handle->len );
 
-				if ( 0 == crc )
-				{
-					handle->currentStatus = SSDL_DECODER_SUCCESS;
-					if( NULL != parser )
-					{
-						(void)parser( handle->buff, handle->len );
-					}
-				}
-				else
-				{
-					handle->currentStatus = SSDL_DECODER_FERROR;
-				}
-				handle->lastStatus = handle->currentStatus;
-			}
-			else
-			{
-				if ( SSDL_SLIP_ESC == lastByte )
-				{
-					/* If escape byte, do not feed anything and save the state */
-					handle->lastByteWasEscaped = true;
-				}
-				else
-				{
-					/* First byte */
-					if( false == handle->isReceiving )
-					{
-						handle->timeoutCnt = 0;
-						handle->isReceiving = true;
-					}
-					/* Feed bytes */
-					if( true == handle->lastByteWasEscaped)
-					{
-						handle->lastByteWasEscaped = false;
+                if ( 0 == crc )
+                {
+                    handle->currentStatus = SSDL_DECODER_SUCCESS;
+                    if( NULL != parser )
+                    {
+                        (void)parser( handle->buff, handle->len );
+                    }
+                }
+                else
+                {
+                    handle->currentStatus = SSDL_DECODER_FERROR;
+                }
+                handle->lastStatus = handle->currentStatus;
+            }
+            else
+            {
+                if ( SSDL_SLIP_ESC == lastByte )
+                {
+                    /* If escape byte, do not feed anything and save the state */
+                    handle->lastByteWasEscaped = true;
+                }
+                else
+                {
+                    /* First byte */
+                    if( false == handle->isReceiving )
+                    {
+                        handle->timeoutCnt = 0;
+                        handle->isReceiving = true;
+                    }
+                    /* Feed bytes */
+                    if( true == handle->lastByteWasEscaped)
+                    {
+                        handle->lastByteWasEscaped = false;
 
-						if(SSDL_SLIP_ESC_END == lastByte)
-						{
-							*(handle->buff + handle->receivedBytes) = SSDL_SLIP_END;
-						}
-						else
-						{
-							*(handle->buff + handle->receivedBytes) = SSDL_SLIP_ESC;
-						}
-					}
-					else
-					{
-						*(handle->buff + handle->receivedBytes) = lastByte;
-					}
+                        if(SSDL_SLIP_ESC_END == lastByte)
+                        {
+                            *(handle->buff + handle->receivedBytes) = SSDL_SLIP_END;
+                        }
+                        else
+                        {
+                            *(handle->buff + handle->receivedBytes) = SSDL_SLIP_ESC;
+                        }
+                    }
+                    else
+                    {
+                        *(handle->buff + handle->receivedBytes) = lastByte;
+                    }
 
-					/* Increase index as new byte arrived */
-					handle->receivedBytes++;
-				}
-			}
-		}
+                    /* Increase index as new byte arrived */
+                    handle->receivedBytes++;
+                }
+            }
+        }
     }
 }
 
