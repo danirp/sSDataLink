@@ -1,6 +1,6 @@
 /** @file ssDataLink.h
  *
- * @brief Super Simple Datalink.
+ * @brief Super Simple Data Link - Header.
  *
  */
 
@@ -14,10 +14,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-
-/* *************************************************************************
- * *                             Public Constants                          *
- * ************************************************************************* */
 
 /* *************************************************************************
  * *                               Public Types                            *
@@ -43,17 +39,27 @@ typedef enum
  */
 typedef struct
 {
-    uint16_t receivedBytes;                /* Number of bytes decoded so far */
-    uint8_t timeoutCnt;                    /* Current number of timeout ticks */
-    uint8_t timeoutTop;                    /* Number timeout ticks to trigger a timeout */
-    uint8_t * buff;                        /* Output decoded message buffer */
-    uint16_t len;                        /* output decoded message length  */
-    bool isReceiving;                    /* Flow control */
-    bool lastByteWasEscaped;            /* Flow control */
-    SSDL_decoderStatus_t currentStatus;        /* Status of the last execution, to be used by calling processes */
-    SSDL_decoderStatus_t lastStatus;        /* Status of the last finished message, to be used by calling processes */
+	/** Number of bytes decoded so far */
+    uint16_t receivedBytes;
+    /** Current number of timeout ticks */
+    uint8_t timeoutCnt;
+    /** Number timeout ticks to trigger a timeout */
+    uint8_t timeoutTop;
+    /** Output decoded message buffer */
+    uint8_t * buff;
+ 	/** output decoded message length  */
+    uint16_t len;
+	/** Flow control */
+    bool isReceiving;
+    /** Flow control */
+    bool lastByteWasEscaped;
+    /** Status of the last execution, to be used by calling processes */
+    SSDL_decoderStatus_t currentStatus;
+    /** Status of the last finished message, to be used by calling processes */
+    SSDL_decoderStatus_t lastStatus;
 
 }SSDL_decoderHandle_t;
+
 
 /**
  * Pointer to the function that SSDL_Decode will call with every time a
@@ -78,8 +84,8 @@ typedef void (*ssdl_sendFunction_t)( uint8_t* data, uint16_t size );
 /**
  * @brief Resets a SSDL_decoderHandle_t "object" and assigns its buffer.
  *
- * @param handle, "instance" of a decoder.
- * @param [out] buff, output buffer assigned to this handle.
+ * @param handle "instance" of a decoder.
+ * @param [out] buff output buffer assigned to this handle.
  * @return None.
  */
 void SSDL_InitDecoder( SSDL_decoderHandle_t* handle, uint8_t* buff, uint16_t timeoutTicks );
@@ -117,9 +123,9 @@ bool SSDL_TimeoutTick( SSDL_decoderHandle_t* handle );
  * SSDL_DECODER_FERROR.
  *
  * @param handle, "instance" of a decoder.
- * @param [in] inBuff, chunk of bytes to be decoded.
- * @param [in] inLen, length of the chunk of bytes.
- * @param [in] parser, function to be called when a valid message is decoded.
+ * @param [in] inBuff chunk of bytes to be decoded.
+ * @param [in] inLen length of the chunk of bytes.
+ * @param [in] parser function to be called when a valid message is decoded.
  *
  * @return None.
  */
@@ -136,17 +142,13 @@ void SSDL_Decode( SSDL_decoderHandle_t* handle, uint8_t* inBuff, uint16_t inLen,
  * sender could be a function copying the data to another buffer or directly
  * a TX function.
  *
- * @param [in] data, chunk of bytes to be encoded and [sent].
- * @param [in] dataLen, length of the chunk of bytes.
- * @param [in] sender, function that store or send the output bytes.
+ * @param [in] data chunk of bytes to be encoded and [sent].
+ * @param [in] dataLen length of the chunk of bytes.
+ * @param [in] sender function that store or send the output bytes.
  *
  * @return None.
  */
 bool SSDL_EncodeAndSend( uint8_t* data, uint16_t dataLen, ssdl_sendFunction_t sender );
-
-/* *************************************************************************
- * *                             OS Objects                                *
- * ************************************************************************* */
 
 #endif /* #ifndef _SUPER_SIMPLE_DATA_LINK_H_ */
 

@@ -1,6 +1,6 @@
 /** @file ssDataLink.c
  *
- * @brief Super Simple Data Link.
+ * @brief Super Simple Data Link - Source.
  *
  */
 
